@@ -148,7 +148,7 @@ def search_lambda_algorithm(Power_Data, min_samples, review_samples, stop_sample
     #plt.close()
     return end_sample, end_flag
 
-def search_moving_average(Power_Data, Min_Time, stop_signal, samples_short, samples_long,filename,folder_plot='./result_plot/'):
+def search_moving_average(Power_Data, Min_Time, stop_signal, samples_short, samples_long):
  # Comparison of two moving averages for finding the end of the baking process
  # Minimum Time is shifted to minimum possible point
  # 10.3.2024: last change
@@ -232,24 +232,83 @@ def search_moving_average(Power_Data, Min_Time, stop_signal, samples_short, samp
     # plt.close()
     
     
-    x_index_diff=np.arange(start_sample,len(diff_ma))
+    # x_index_diff=np.arange(start_sample,len(diff_ma))
     
-    fig, ax1 = plt.subplots(figsize=(10, 6))
-    ax2 = ax1.twinx()  # Erstelle eine zweite y-Achse
-    p1, =ax1.plot(Power_Data, color='green', label='power data')
-    p2, =ax1.plot(ma_short, color='black', linewidth=1, label='short (' +str(samples_short)+ ' samples)')
-    p3, =ax1.plot(ma_long, color='red', linewidth=1,label= 'long (' +str(samples_long)+ ' samples)')
-    p4, =ax1.plot(end_sample,Power_Data[end_sample], marker='o',linestyle='', color='black', linewidth=0.5,label= 'endpoint')
-    p5, =ax2.plot(x_index_diff,diff_ma[start_sample:], color='blue', linewidth=1,label= 'difference long-short')
-    ax2.plot(end_sample,diff_ma[end_sample], marker='o', color='black', linewidth=0.5,label= 'endpoint')
-    ax1.legend(handles=[p1, p2,p3,p4,p5],loc='lower left')
-    ax1.set_xlabel('samples')
-    ax1.set_ylabel('signal', color='black')
-    ax2.set_ylabel('diff signal', color='black')
-    plt.suptitle('Average-Evaluation  |  ' + filename)
-    title_text = 'startsample: '+str(start_sample)+'  |  endsample: '+str(end_sample)+'  |  endtime: '+str(round(end_sample*5/60,2))+'min''  |   successful: ' + str(end_flag)
-    plt.title(title_text, ha='center')
-    plt.show()
+    # fig, ax1 = plt.subplots(figsize=(10, 6))
+    # ax2 = ax1.twinx()  # Erstelle eine zweite y-Achse
+    # p1, =ax1.plot(Power_Data, color='green', label='power data')
+    # p2, =ax1.plot(ma_short, color='black', linewidth=1, label='short (' +str(samples_short)+ ' samples)')
+    # p3, =ax1.plot(ma_long, color='red', linewidth=1,label= 'long (' +str(samples_long)+ ' samples)')
+    # p4, =ax1.plot(end_sample,Power_Data[end_sample], marker='o',linestyle='', color='black', linewidth=0.5,label= 'endpoint')
+    # p5, =ax2.plot(x_index_diff,diff_ma[start_sample:], color='blue', linewidth=1,label= 'difference long-short')
+    # ax2.plot(end_sample,diff_ma[end_sample], marker='o', color='black', linewidth=0.5,label= 'endpoint')
+    # ax1.legend(handles=[p1, p2,p3,p4,p5],loc='lower left')
+    # ax1.set_xlabel('samples')
+    # ax1.set_ylabel('signal', color='black')
+    # ax2.set_ylabel('diff signal', color='black')
+    # plt.suptitle('Average-Evaluation  |  ' + filename)
+    # title_text = 'startsample: '+str(start_sample)+'  |  endsample: '+str(end_sample)+'  |  endtime: '+str(round(end_sample*5/60,2))+'min''  |   successful: ' + str(end_flag)
+    # plt.title(title_text, ha='center')
+    # plt.show()
     #plt.close()
               
     return end_sample, end_flag
+
+    import numpy as np
+import math
+
+def check_saddle_point_occurred(Power_Data, samples_short, samples_long, stop_signal, Min_Time):
+    # Create a sample array
+    if len(Power_Data.shape) == 1:
+        data = Power_Data.reshape(-1, 1)
+    else:
+        data = Power_Data
+
+    # Calculate the short moving average
+    window_size = samples_short
+    padded_data = np.pad(data, ((window_size - 1, 0), (0, 0)), mode='constant', constant_values=np.nan)
+    moving_average = np.convolve(padded_data.flatten(), np.ones(window_size) / window_size, mode='valid')
+    moving_average = np.nan_to_num(moving_average)
+    ma_short = moving_average
+
+    # Calculate the long moving average
+    window_size = samples_long
+    padded_data = np.pad(data, ((window_size - 1, 0), (0, 0)), mode='constant', constant_values=np.nan)
+    moving_average = np.convolve(padded_data.flatten(), np.ones(window_size) / window_size, mode='valid')
+    moving_average = np.nan_to_num(moving_average)
+    ma_long = moving_average
+
+    # Calculate the difference between the long and short moving averages
+    diff_ma = ma_long - ma_short
+    counter = 0
+    end_flag = False
+    saddle_occurred = False  # Flag to track if the saddle point has already happened
+
+    # Search for the first non-zero value in Power_Data to determine the starting point
+    first_non_zero_value = next((index for index, value in enumerate(Power_Data) if value != 0 and not math.isnan(value)), None)
+
+    # Calculate the starting sample for the search
+    if first_non_zero_value + samples_long <= Min_Time:
+        start_sample = Min_Time
+    else:
+        start_sample = first_non_zero_value + samples_long
+
+    # Search for the saddle point in the power curve
+    for z in range(start_sample, diff_ma.size):
+        if diff_ma[z] <= 0:  # Check for negative difference
+            counter += 1
+            if counter >= stop_signal and not end_flag:
+                # If the saddle point has not been flagged yet, mark it as found
+                saddle_occurred = True
+                end_sample = z
+                end_flag = True
+                break  # Saddle point found, stop checking
+        else:
+            counter = 0  # Reset the counter if not in a negative trend
+
+    # if saddle_occurred:
+    #     print(f"Saddle point already occurred at sample index: {end_sample}")
+    # else:
+    #     print("No saddle point detected in the power curve data.")
+    
+    return saddle_occurred, end_sample if saddle_occurred else None
