@@ -261,28 +261,21 @@ class CocoReaderApp:
                     
                     # Pass the timestamp of the saddle point (if found)
                     saddle_point_time = None
-                    saddle_point_time1 = None
-                    saddle_point_time2 = None
                     if saddle_occurred:
                         # Convert the sample index of the saddle point to timestamp
-                        saddle_point_time1 = df['time_delta'].iloc[end_sample_ma]
-                        saddle_point_time2 = df_timestemp_clean['time_delta_clean'].iloc[end_sample_ma]
+                        saddle_point_time = df_timestemp_clean['time_delta_clean'].iloc[end_sample_ma]
                         print(f"Saddle Point Found at Sample: {end_sample_ma}")
 
-                    self.update_plot(df['Send_HotAirFan_Power'], df['time_delta'], plot=1, saddle_point_time=saddle_point_time2)
+                    self.update_plot(df['Send_HotAirFan_Power'], df['time_delta'], plot=1, saddle_point_time=saddle_point_time)
 
                     #self.update_plot(df['Send_HotAirFan_Power'], matplotlib.dates.date2num(pd.to_datetime(df['time_delta'], format='%d.%m.%Y %H:%M:%S')), plot=1, saddle_point_time=saddle_point_time1)
-                    self.update_plot(Clean_Power_Signal_Smooth,df_timestemp_clean['time_delta_clean'] , plot=2,saddle_point_time = saddle_point_time2)
+                    self.update_plot(Clean_Power_Signal_Smooth,df_timestemp_clean['time_delta_clean'] , plot=2,saddle_point_time = saddle_point_time)
                     print(df)
                     # Update status message if saddle point is found
                     if saddle_occurred:
                         self.status_label.config(
                             text=f"Saddle Point Found at Sample: {end_sample_ma}", fg="#008080"
                         )
-                        # Clean_Power_Index = df.index[len(df.index)-len(Clean_Power_Signal_Smooth):]
-                        # endsample_corrected = Clean_Power_Index[end_sample_ma]
-                        # endtime_corrected_minute = round(endsample_corrected / 60, 2)
-                        # print(endtime_corrected_minute)
                         self.stop = True
                     else:
                         self.status_label.config(text="Searching...", fg="blue")
